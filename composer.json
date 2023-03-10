@@ -32,7 +32,7 @@
   "extra": {
     "laravel": {
       "providers": [
-        "Danvaly\\PrimeDatasource\\DatasourceProvider"
+        "Danvaly\\PrimeDatasource\\PrimeDatasourceProvider"
       ]
     }
   }
