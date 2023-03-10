@@ -3,16 +3,13 @@
  * @author Aaron Francis <aarondfrancis@gmail.com|https://twitter.com/aarondfrancis>
  */
 
-namespace Hammerstone\FastPaginate\Tests\Integration;
+namespace Danvaly\PrimeDatasource\Tests\Integration;
 
-use Hammerstone\FastPaginate\Tests\Support\NotificationStringKey;
-use Hammerstone\FastPaginate\Tests\Support\User;
-use Hammerstone\FastPaginate\Tests\Support\UserCustomPage;
-use Hammerstone\FastPaginate\Tests\Support\UserCustomTable;
-use Hammerstone\FastPaginate\Tests\Support\UserMutatedId;
-use Illuminate\Database\QueryException;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
+use Danvaly\PrimeDatasource\Datasource;
+use Danvaly\PrimeDatasource\Tests\Support\NotificationStringKey;
+use Danvaly\PrimeDatasource\Tests\Support\User;
+use Danvaly\PrimeDatasource\Tests\Support\UserCustomPage;
+use Danvaly\PrimeDatasource\Tests\Support\UserMutatedId;
 
 class BuilderTest extends Base
 {
@@ -24,11 +21,12 @@ class BuilderTest extends Base
     public function basic_test()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->fastPaginate();
+            $results = User::query()->toDatasource();
         });
 
-        $this->assertInstanceOf(LengthAwarePaginator::class, $results);
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $results */
+
+        $this->assertInstanceOf(Datasource::class, $results);
+        /** @var \Danvaly\PrimeDatasource\Datasource $results */
         $this->assertEquals(15, $results->count());
         $this->assertEquals('Person 15', $results->last()->name);
         $this->assertCount(3, $queries);
@@ -47,7 +45,7 @@ class BuilderTest extends Base
     public function different_page_size()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->fastPaginate(5);
+            $results = User::query()->toDatasource(5);
         });
 
         /** @var \Illuminate\Pagination\LengthAwarePaginator $results */
@@ -67,7 +65,7 @@ class BuilderTest extends Base
     public function page_2()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->fastPaginate(5, ['*'], 'page', 2);
+            $results = User::query()->toDatasource(5, ['*'], 'page', 2);
         });
 
         /** @var \Illuminate\Pagination\LengthAwarePaginator $results */
@@ -87,10 +85,10 @@ class BuilderTest extends Base
     public function pk_attribute_mutations_are_skipped()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = UserMutatedId::query()->fastPaginate(5);
+            $results = UserMutatedId::query()->toDatasource(5);
         });
 
-        /** @var \Illuminate\Pagination\LengthAwarePaginator $results */
+        /** @var Datasource $results */
         $this->assertEquals(5, $results->count());
 
         $this->assertEquals(
@@ -103,7 +101,7 @@ class BuilderTest extends Base
     public function custom_page_is_preserved()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = UserCustomPage::query()->fastPaginate();
+            $results = UserCustomPage::query()->toDatasource();
         });
 
         /** @var \Illuminate\Pagination\LengthAwarePaginator $results */
@@ -120,19 +118,10 @@ class BuilderTest extends Base
     }
 
     /** @test */
-    public function custom_table_is_preserved()
-    {
-        $this->expectException(QueryException::class);
-        $this->expectExceptionMessage("Base table or view not found: 1146 Table 'fast_paginate.custom_table'");
-
-        UserCustomTable::query()->fastPaginate();
-    }
-
-    /** @test */
     public function order_is_propagated()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->orderBy('name')->fastPaginate(5);
+            $results = User::query()->orderBy('name')->toDatasource(5);
         });
 
         $this->assertEquals(
@@ -145,7 +134,7 @@ class BuilderTest extends Base
     public function eager_loads_are_cleared_on_inner_query()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->with('posts')->fastPaginate(5);
+            $results = User::query()->with('posts')->toDatasource(5);
         });
 
         // If we didn't clear the eager loads, there would be 5 queries.
@@ -162,7 +151,7 @@ class BuilderTest extends Base
     public function eager_loads_are_loaded_on_outer_query()
     {
         $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->with('posts')->fastPaginate();
+            $results = User::query()->with('posts')->toDatasource();
         });
 
         $this->assertTrue($results->first()->relationLoaded('posts'));
@@ -173,7 +162,7 @@ class BuilderTest extends Base
     public function selects_are_overwritten()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->selectRaw('(select 1 as complicated_subquery)')->fastPaginate();
+            $results = User::query()->selectRaw('(select 1 as complicated_subquery)')->toDatasource();
         });
 
         // Dropped for our inner query
@@ -196,7 +185,7 @@ class BuilderTest extends Base
             User::query()
                 ->selectRaw('*, concat(name, id) as name_id')
                 ->having('name_id', '!=', '')
-                ->fastPaginate();
+                ->toDatasource();
         });
 
         $this->assertCount(2, $queries);
@@ -210,7 +199,7 @@ class BuilderTest extends Base
     public function standard_with_count_works()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->withCount('posts')->orderByDesc('posts_count')->fastPaginate();
+            $results = User::query()->withCount('posts')->orderByDesc('posts_count')->toDatasource();
         });
 
         $this->assertCount(3, $queries);
@@ -229,7 +218,7 @@ class BuilderTest extends Base
     public function aliased_with_count()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            User::query()->withCount('posts as posts_ct')->orderByDesc('posts_ct')->fastPaginate();
+            User::query()->withCount('posts as posts_ct')->orderByDesc('posts_ct')->toDatasource();
         });
 
         $this->assertCount(3, $queries);
@@ -243,7 +232,7 @@ class BuilderTest extends Base
     public function unordered_with_count_is_ignored()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            User::query()->withCount('posts')->orderByDesc('id')->fastPaginate();
+            User::query()->withCount('posts')->orderByDesc('id')->toDatasource();
         });
 
         $this->assertCount(3, $queries);
@@ -259,7 +248,7 @@ class BuilderTest extends Base
         $this->seedStringNotifications();
 
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            NotificationStringKey::query()->fastPaginate();
+            NotificationStringKey::query()->toDatasource();
         });
 
         $this->assertCount(3, $queries);
@@ -276,7 +265,7 @@ class BuilderTest extends Base
     public function groups_are_skipped()
     {
         $queries = $this->withQueriesLogged(function () use (&$results) {
-            User::query()->select(['name'])->groupBy('name')->fastPaginate();
+            User::query()->select(['name'])->groupBy('name')->toDatasource();
         });
 
         $this->assertCount(2, $queries);
@@ -284,105 +273,5 @@ class BuilderTest extends Base
             'select `name` from `users` group by `name` limit 15 offset 0',
             $queries[1]['query']
         );
-    }
-
-    /** @test */
-    public function basic_simple_test()
-    {
-        $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->simpleFastPaginate();
-        });
-
-        /** @var \Illuminate\Pagination\Paginator $results */
-        $this->assertInstanceOf(Paginator::class, $results);
-        $this->assertEquals(15, $results->count());
-        $this->assertEquals('Person 15', $results->last()->name);
-        $this->assertCount(2, $queries);
-
-        $this->assertEquals(
-            'select * from `users` where `users`.`id` in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15) limit 16 offset 0',
-            $queries[1]['query']
-        );
-
-        $this->assertTrue($results->hasMorePages());
-        $this->assertEquals(1, $results->currentPage());
-    }
-
-    /** @test */
-    public function basic_simple_test_page_two()
-    {
-        $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::query()->simpleFastPaginate(5, ['*'], 'page', 2);
-        });
-
-        /** @var \Illuminate\Pagination\Paginator $results */
-        $this->assertInstanceOf(Paginator::class, $results);
-        $this->assertEquals(5, $results->count());
-        $this->assertEquals('Person 10', $results->last()->name);
-        $this->assertCount(2, $queries);
-
-        $this->assertEquals(
-            'select * from `users` where `users`.`id` in (6, 7, 8, 9, 10) limit 6 offset 0',
-            $queries[1]['query']
-        );
-
-        $this->assertTrue($results->hasMorePages());
-        $this->assertEquals(2, $results->currentPage());
-    }
-
-    /** @test */
-    public function basic_simple_test_from_relation()
-    {
-        $queries = $this->withQueriesLogged(function () use (&$results) {
-            $results = User::first()->posts()->simpleFastPaginate();
-        });
-
-        /** @var \Illuminate\Pagination\Paginator $results */
-        $this->assertInstanceOf(Paginator::class, $results);
-        $this->assertEquals(1, $results->count());
-        $this->assertEquals('Post 1', $results->last()->name);
-        $this->assertCount(3, $queries);
-
-        $this->assertEquals(
-            'select * from `posts` where `posts`.`user_id` = ? and `posts`.`user_id` is not null and `posts`.`id` in (1) limit 16 offset 0',
-            $queries[2]['query']
-        );
-
-        $this->assertFalse($results->hasMorePages());
-        $this->assertEquals(1, $results->currentPage());
-    }
-
-    /** @test */
-    public function with_sum_has_the_correct_number_of_parameters()
-    {
-        $queries = $this->withQueriesLogged(function () use (&$fast, &$regular) {
-            $fast = User::query()
-                ->withSum([
-                    'posts as views_count' => function ($query) {
-                        $query->where('views', '>', 0);
-                    },
-                ], 'views')
-                ->orderBy('views_count')
-                ->fastPaginate();
-
-            $regular = User::query()
-                ->withSum([
-                    'posts as views_count' => function ($query) {
-                        $query->where('views', '>', 0);
-                    },
-                ], 'views')
-                ->orderBy('views_count')
-                ->paginate();
-        });
-
-        $this->assertEquals($queries[0]['query'], $queries[2]['query']);
-        $this->assertEquals($queries[0]['bindings'], $queries[2]['bindings']);
-
-        $this->assertEquals($queries[1]['query'], $queries[3]['query']);
-        $this->assertEquals($queries[1]['bindings'], $queries[3]['bindings']);
-
-        $this->assertEquals($fast->toArray(), $regular->toArray());
-
-        $this->assertEquals(get_class($fast), get_class($regular));
     }
 }

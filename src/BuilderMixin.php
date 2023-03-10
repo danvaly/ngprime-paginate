@@ -1,19 +1,11 @@
 <?php
-/**
- * @author Aaron Francis <aarondfrancis@gmail.com|https://twitter.com/aarondfrancis>
- */
-
-namespace Hammerstone\FastPaginate;
+namespace Danvaly\PrimeDatasource;
 
 class BuilderMixin
 {
-    public function simpleFastPaginate()
-    {
-        return (new FastPaginate())->simpleFastPaginate();
-    }
 
-    public function fastPaginate()
+    public function toDatasource()
     {
-        return (new FastPaginate())->fastPaginate();
+        return (new PrimeDatasource())->toDatasource();
     }
 }

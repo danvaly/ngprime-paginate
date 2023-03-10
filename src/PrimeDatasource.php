@@ -1,41 +1,34 @@
 <?php
-/**
- * @author Aaron Francis <aarondfrancis@gmail.com|https://twitter.com/aarondfrancis>
- */
 
-namespace Hammerstone\FastPaginate;
+namespace Danvaly\PrimeDatasource;
 
 use Closure;
 use Illuminate\Database\Query\Expression;
 
-class FastPaginate
+class PrimeDatasource
 {
-    public function fastPaginate()
+    public function toDatasource($filters = [])
     {
-        return $this->paginate('paginate', function (array $items, $paginator) {
-            return $this->paginator(
-                $items,
-                $paginator->total(),
-                $paginator->perPage(),
-                $paginator->currentPage(),
-                $paginator->getOptions()
-            );
+        return $this->paginate('paginate', $filters, function (array $items, $paginator) {
+            $datasource = new Datasource($items);
+            $datasource->total = $paginator->total();
+            $datasource->per_page = $paginator->perPage();
+            $datasource->current_page = $paginator->currentPage();
+            $datasource->last_page = $paginator->lastPage();
+            $datasource->first_item = $paginator->firstItem();
+            $datasource->last_item = $paginator->lastItem();
+            $datasource->has_more_pages = $paginator->hasMorePages();
+            $datasource->next_page_url = $paginator->nextPageUrl();
+            $datasource->prev_page_url = $paginator->previousPageUrl();
+            $datasource->from = $paginator->firstItem();
+            $datasource->to = $paginator->lastItem();
+            $datasource->options = $paginator->getOptions();
+
+            return $datasource;
         });
     }
 
-    public function simpleFastPaginate()
-    {
-        return $this->paginate('simplePaginate', function (array $items, $paginator) {
-            return $this->simplePaginator(
-                $items,
-                $paginator->perPage(),
-                $paginator->currentPage(),
-                $paginator->getOptions()
-            )->hasMorePagesWhen($paginator->hasMorePages());
-        });
-    }
-
-    protected function paginate(string $paginationMethod, Closure $paginatorOutput)
+    protected function paginate(string $paginationMethod, $filters = [], Closure $paginatorOutput)
     {
         return function ($perPage = null, $columns = ['*'], $pageName = 'page', $page = null) use (
             $paginationMethod,
@@ -43,6 +36,29 @@ class FastPaginate
         ) {
             /** @var \Illuminate\Database\Query\Builder $this */
             $base = $this->getQuery();
+
+            if (isset($filters['sortField']) && isset($filters['sortOrder'])) {
+                $base->orderBy($filters['sortField'], $filters['sortOrder']);
+            }
+
+            if (isset($filters['multiSortMeta'])) {
+                $multiSortMeta = $filters['multiSortMeta'];
+                foreach ($multiSortMeta as $sortMeta) {
+                    $base->orderBy($sortMeta['field'], $sortMeta['order']);
+                }
+            }
+
+            if (isset($filters['filters'])) {
+                foreach ($filters['filters'] as $filter) {
+                    $base->where($filter['field'], $filter['value']);
+                }
+            }
+
+            if (isset($filters['globalFilter'])) {
+                $globalFilter = $filters['globalFilter'];
+                $base->search($globalFilter);
+            }
+
             // Havings and groups don't work well with this paradigm, because we are
             // counting on each row of the inner query to return a primary key
             // that we can use. When grouping, that's not always the case.
@@ -55,10 +71,11 @@ class FastPaginate
             $table = $model->getTable();
 
             try {
-                $innerSelectColumns = FastPaginate::getInnerSelectColumns($this);
+                $innerSelectColumns = PrimeDatasource::getInnerSelectColumns($this);
             } catch (QueryIncompatibleWithFastPagination $e) {
                 return $this->{$paginationMethod}($perPage, $columns, $pageName, $page);
             }
+
 
             // This is the copy of the query that becomes
             // the inner query that selects keys only.

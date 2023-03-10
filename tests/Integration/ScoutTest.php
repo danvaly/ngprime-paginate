@@ -3,9 +3,9 @@
  * @author Aaron Francis <aarondfrancis@gmail.com|https://twitter.com/aarondfrancis>
  */
 
-namespace Hammerstone\FastPaginate\Tests\Integration;
+namespace Danvaly\PrimeDatasource\Tests\Integration;
 
-use Hammerstone\FastPaginate\Tests\Support\UserScout;
+use Danvaly\PrimeDatasource\Tests\Support\UserScout;
 
 class ScoutTest extends Base
 {
@@ -14,7 +14,7 @@ class ScoutTest extends Base
     {
         $queries = $this->withQueriesLogged(function () {
             $results1 = UserScout::search('Person')->paginate();
-            $results2 = UserScout::search('Person')->fastPaginate();
+            $results2 = UserScout::search('Person')->toDatasource();
 
             $this->assertEquals($results1->count(), $results2->count());
         });

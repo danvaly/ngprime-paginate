@@ -1,15 +1,11 @@
 <?php
-/**
- * @author Aaron Francis <aaron@hammerstone.dev>
- */
-
-namespace Hammerstone\FastPaginate;
+namespace Danvaly\PrimeDatasource;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 
-class FastPaginateProvider extends ServiceProvider
+class PrimeDatasourceProvider extends ServiceProvider
 {
     public function boot()
     {

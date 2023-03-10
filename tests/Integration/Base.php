@@ -3,9 +3,9 @@
  * @author Aaron Francis <aaron@hammerstone.dev|https://twitter.com/aarondfrancis>
  */
 
-namespace Hammerstone\FastPaginate\Tests\Integration;
+namespace Danvaly\PrimeDatasource\Tests\Integration;
 
-use Hammerstone\FastPaginate\FastPaginateProvider;
+use Danvaly\PrimeDatasource\PrimeDatasourceProvider;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +17,7 @@ abstract class Base extends TestCase
     protected function getPackageProviders($app)
     {
         return [
-            FastPaginateProvider::class,
+            PrimeDatasourceProvider::class,
             ScoutServiceProvider::class,
         ];
     }
